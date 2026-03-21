@@ -6,16 +6,19 @@ import (
 	"net/http"
 )
 
-type apiHandler struct{}
-
-func (apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func handleRoot(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	http.FileServer(http.Dir("./files/")).ServeHTTP(w, r)
 }
 
+func handleLogo(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "./files/assets/logo.png")
+}
+
 func main() {
 	mux := http.NewServeMux()
-	mux.Handle("/", apiHandler{})
+	mux.HandleFunc("/", handleRoot)
+	mux.HandleFunc("/assets/logo.png", handleLogo)
 
 	srv := http.Server{
 		Addr:    "localhost:8080",
