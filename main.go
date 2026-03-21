@@ -2,21 +2,29 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 )
 
 type apiHandler struct{}
 
-func (apiHandler) ServeHTTP(http.ResponseWriter, *http.Request) {}
+func (apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotFound)
+	fmt.Fprint(w, "Welcome to my Go server")
+}
 
 func main() {
 	mux := http.NewServeMux()
-	mux.Handle("/api/", apiHandler{})
-	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		if req.URL.Path != "/" {
-			http.NotFound(w, req)
-			return
-		}
-		fmt.Fprintf(w, "Welcome to the home page!")
-	})
+	mux.Handle("/", apiHandler{})
+
+	srv := http.Server{
+		Addr:    "localhost:8080",
+		Handler: mux,
+	}
+
+	fmt.Println("Server listening on: ", srv.Addr)
+
+	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		log.Fatalf("HTTP server ListenAndServe: %v", err)
+	}
 }
