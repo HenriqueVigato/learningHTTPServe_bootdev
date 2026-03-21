@@ -9,8 +9,8 @@ import (
 type apiHandler struct{}
 
 func (apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotFound)
-	fmt.Fprint(w, "Welcome to my Go server")
+	w.WriteHeader(http.StatusOK)
+	http.FileServer(http.Dir("./files/")).ServeHTTP(w, r)
 }
 
 func main() {
