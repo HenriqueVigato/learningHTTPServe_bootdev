@@ -7,18 +7,24 @@ import (
 )
 
 func handleRoot(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
 	http.FileServer(http.Dir("./files/")).ServeHTTP(w, r)
 }
 
 func handleLogo(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "./files/assets/logo.png")
+	http.FileServer(http.Dir("./files/assets/")).ServeHTTP(w, r)
+}
+
+func handleHealth(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
 }
 
 func main() {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", handleRoot)
-	mux.HandleFunc("/assets/logo.png", handleLogo)
+	mux.Handle("/app/", http.StripPrefix("/app", http.HandlerFunc(handleRoot)))
+	mux.Handle("/assets/", http.StripPrefix("/assets", http.HandlerFunc(handleLogo)))
+	mux.HandleFunc("/healthz/", handleHealth)
 
 	srv := http.Server{
 		Addr:    "localhost:8080",
