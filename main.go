@@ -48,10 +48,10 @@ func main() {
 	var apiConf apiConfig
 	mux := http.NewServeMux()
 	mux.Handle("/app/", http.StripPrefix("/app", apiConf.middlewareMetricsInt(http.HandlerFunc(handleRoot))))
-	mux.Handle("/assets/", http.StripPrefix("/assets", http.HandlerFunc(handleLogo)))
-	mux.HandleFunc("GET /healthz", handleHealth)
-	mux.HandleFunc("GET /metrics", apiConf.metrics)
-	mux.HandleFunc("POST /reset", apiConf.reset)
+	mux.Handle("/app/assets/", http.StripPrefix("/app/assets", apiConf.middlewareMetricsInt(http.HandlerFunc(handleLogo))))
+	mux.HandleFunc("GET /api/healthz", handleHealth)
+	mux.HandleFunc("GET /api/metrics", apiConf.metrics)
+	mux.HandleFunc("POST /api/reset", apiConf.reset)
 
 	srv := http.Server{
 		Addr:    "localhost:8080",
