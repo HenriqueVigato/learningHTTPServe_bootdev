@@ -67,7 +67,7 @@ func validateChirp(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, "Chirp is too long")
 		return
 	}
-	respondWithJSON(w, http.StatusOK, map[string]bool{"valid": true})
+	respondWithJSON(w, http.StatusOK, map[string]string{"cleaned_body": cleanInput(params.Body)})
 }
 
 func main() {
