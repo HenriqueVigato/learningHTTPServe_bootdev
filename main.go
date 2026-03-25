@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -51,6 +52,24 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
+func validateChirp(w http.ResponseWriter, r *http.Request) {
+	type parameters struct {
+		Body string `json:"body"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	if err := decoder.Decode(&params); err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
+		return
+	}
+	if len(params.Body) > 140 {
+		respondWithError(w, http.StatusBadRequest, "Chirp is too long")
+		return
+	}
+	respondWithJSON(w, http.StatusOK, map[string]bool{"valid": true})
+}
+
 func main() {
 	var apiConf apiConfig
 	mux := http.NewServeMux()
@@ -59,6 +78,7 @@ func main() {
 	mux.HandleFunc("GET /api/healthz", handleHealth)
 	mux.HandleFunc("GET /admin/metrics", apiConf.metrics)
 	mux.HandleFunc("POST /admin/reset", apiConf.reset)
+	mux.HandleFunc("POST /api/validate_chirp", validateChirp)
 
 	srv := http.Server{
 		Addr:    "localhost:8080",
