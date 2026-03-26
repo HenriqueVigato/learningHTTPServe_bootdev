@@ -6,6 +6,11 @@ import (
 )
 
 func TestCleanInput(t *testing.T) {
+	forbiddenWords := map[string]struct{}{
+		"kerfuffle": {},
+		"sharbert":  {},
+		"fornax":    {},
+	}
 	cases := []string{
 		"I heard that kerfuffle was quite bad",
 		"What a KERFUFFLE that was yesterday",
@@ -21,7 +26,7 @@ func TestCleanInput(t *testing.T) {
 	}
 
 	for i, str := range cases {
-		cases[i] = cleanInput(str)
+		cases[i] = cleanInput(str, forbiddenWords)
 	}
 
 	if !strings.Contains(cases[0], "****") {
