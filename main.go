@@ -1,11 +1,16 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"sync/atomic"
+
+	"github.com/HenriqueVigato/learningHTTPServe_bootdev/internal/database"
+	_ "github.com/lib/pq"
 )
 
 type apiConfig struct {
@@ -71,6 +76,14 @@ func validateChirp(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	dbURL := os.Getenv("DB_URL")
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		fmt.Printf("erro ao abrir conexao com o banco de dados: %v", err)
+	}
+
+	_ = database.New(db)
+
 	var apiConf apiConfig
 	mux := http.NewServeMux()
 	mux.Handle("/app/", http.StripPrefix("/app", apiConf.middlewareMetricsInt(http.HandlerFunc(handleRoot))))
