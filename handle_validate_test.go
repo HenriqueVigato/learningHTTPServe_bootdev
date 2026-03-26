@@ -1,9 +1,56 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
+
+func TestValidateChirp(t *testing.T) {
+	tests := []struct {
+		name     string
+		body     string
+		wantCode int
+		wantBody string
+	}{
+		{
+			name:     "valid chirp",
+			body:     `{"body":"I had something interesting for breakfast"}`,
+			wantCode: http.StatusOK,
+			wantBody: `{"cleaned_body":"I had something interesting for breakfast"}`,
+		},
+		{
+			name:     "too long",
+			body:     `{"body":"this is a very long chirp that exceeds the maximum allowed character limit of one hundred and forty characters so it should fail so there are some more characters"}`,
+			wantCode: http.StatusBadRequest,
+			wantBody: `{"error":"Chirp is too long"}`,
+		},
+		{
+			name:     "forbidden word",
+			body:     `{"body":"I heard that kerfuffle was quite bad"}`,
+			wantCode: http.StatusOK,
+			wantBody: `{"cleaned_body":"I heard that **** was quite bad"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("POST", "/api/validate_chirp", strings.NewReader(tt.body))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+
+			validateChirp(w, req)
+
+			if w.Code != tt.wantCode {
+				t.Errorf("got status %d, want %d", w.Code, tt.wantCode)
+			}
+			if strings.TrimSpace(w.Body.String()) != tt.wantBody {
+				t.Errorf("got body %s, want %s", w.Body.String(), tt.wantBody)
+			}
+		})
+	}
+}
 
 func TestCleanInput(t *testing.T) {
 	forbiddenWords := map[string]struct{}{
