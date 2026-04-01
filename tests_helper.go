@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"testing"
 
@@ -20,9 +21,11 @@ func getConnectionTestDB(t *testing.T) (*apiConfig, error) {
 		db:        dbQueries,
 		plataform: "dev",
 	}
+	testConfig.db.CreateUser(context.Background(), "user@test.test")
 
 	t.Cleanup(func() {
 		db.Exec("DELETE FROM users")
+		db.Exec("DELETE FROM chirps")
 		db.Close()
 	})
 

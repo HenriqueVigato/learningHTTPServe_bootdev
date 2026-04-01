@@ -20,4 +20,7 @@ func (api *apiConfig) reset(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatalf("erro o deletar os usuarios %v", err)
 	}
+	if err = api.db.DeleteChirps(r.Context()); err != nil {
+		log.Fatalf("erro ao deletar os chirps %v", err)
+	}
 }

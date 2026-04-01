@@ -46,7 +46,7 @@ func main() {
 
 	// POST
 	mux.HandleFunc("POST /admin/reset", apiConf.reset)
-	mux.HandleFunc("POST /api/validate_chirp", validateChirp)
+	mux.HandleFunc("POST /api/chirps", apiConf.addChirps)
 	mux.HandleFunc("POST /api/users", apiConf.addUser)
 
 	srv := http.Server{
