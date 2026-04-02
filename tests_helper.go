@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"testing"
 
 	"github.com/HenriqueVigato/learningHTTPServe_bootdev/internal/database"
@@ -21,7 +22,14 @@ func getConnectionTestDB(t *testing.T) (*apiConfig, error) {
 		db:        dbQueries,
 		plataform: "dev",
 	}
-	testConfig.db.CreateUser(context.Background(), "user@test.test")
+	user, err := testConfig.db.CreateUser(context.Background(), "user@test.test")
+	if err != nil {
+		t.Fatalf("erro ao criar o usuario: %v", err)
+	}
+
+	if err = createChirps(testConfig, user); err != nil {
+		t.Fatalf("%v", err)
+	}
 
 	t.Cleanup(func() {
 		db.Exec("DELETE FROM users")
@@ -30,4 +38,26 @@ func getConnectionTestDB(t *testing.T) (*apiConfig, error) {
 	})
 
 	return &testConfig, nil
+}
+
+func createChirps(api apiConfig, user database.User) error {
+	chirps := []string{
+		"Hello, testing the handler chirps",
+		"I heard that kerfuffle was quite bad",
+		"Did you hear about that sharbert incident?",
+		"The fornax was mentioned in the report",
+		"Just a normal chirp to fill the database",
+		"Another chirp for testing purposes",
+	}
+
+	for _, body := range chirps {
+		_, err := api.db.CreateChirp(context.Background(), database.CreateChirpParams{
+			Body:   body,
+			UserID: user.ID,
+		})
+		if err != nil {
+			return fmt.Errorf("erro o adicionar o chirp (%s) no banco de dados: %v", body, err)
+		}
+	}
+	return nil
 }
