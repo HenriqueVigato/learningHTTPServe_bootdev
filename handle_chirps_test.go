@@ -62,3 +62,19 @@ func TestHandlerChirps(t *testing.T) {
 		})
 	}
 }
+
+func TestGetAllChirps(t *testing.T) {
+	api, err := getConnectionTestDB(t)
+	if err != nil {
+		t.Fatalf("erro ao preparar o banco de dados para os testes %v", err)
+	}
+
+	req := httptest.NewRequest("GET", "/api/chirps", nil)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	api.db.GetAllChirps(req.Context())
+
+	if !strings.Contains(w.Body.String(), "chirp test") {
+		t.Errorf("Nao foi encontrado o chirp esperado %v", w.Body.String())
+	}
+}
