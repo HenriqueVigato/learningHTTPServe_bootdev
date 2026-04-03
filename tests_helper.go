@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/HenriqueVigato/learningHTTPServe_bootdev/internal/auth"
 	"github.com/HenriqueVigato/learningHTTPServe_bootdev/internal/database"
 )
 
@@ -22,7 +23,16 @@ func getConnectionTestDB(t *testing.T) (*apiConfig, error) {
 		db:        dbQueries,
 		plataform: "dev",
 	}
-	user, err := testConfig.db.CreateUser(context.Background(), "user@test.test")
+	passwordHash, err := auth.HashPassword("password")
+	if err != nil {
+		t.Fatalf("erro ao hashear a senha %v", err)
+	}
+
+	userParams := database.CreateUserParams{
+		Email:          "user@test.test",
+		HashedPassword: passwordHash,
+	}
+	user, err := testConfig.db.CreateUser(context.Background(), userParams)
 	if err != nil {
 		t.Fatalf("erro ao criar o usuario: %v", err)
 	}
