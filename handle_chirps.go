@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -10,18 +11,20 @@ import (
 	"github.com/google/uuid"
 )
 
+type Chirp struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
 func (api *apiConfig) addChirps(w http.ResponseWriter, r *http.Request) {
 	type params struct {
 		Body   string    `json:"body"`
 		UserID uuid.UUID `json:"user_id"`
 	}
-	type Chirp struct {
-		ID        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Body      string    `json:"body"`
-		UserID    uuid.UUID `json:"user_id"`
-	}
+
 	var requestBody params
 
 	decoder := json.NewDecoder(r.Body)
@@ -55,5 +58,29 @@ func (api *apiConfig) addChirps(w http.ResponseWriter, r *http.Request) {
 
 	if err = respondWithJSON(w, http.StatusCreated, mapedChirp); err != nil {
 		log.Printf("erro ao responder a request %v", err)
+	}
+}
+
+func (api *apiConfig) getAllChirps(w http.ResponseWriter, r *http.Request) {
+	chirps, err := api.db.GetAllChirps(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Erro ao buscar os chirps no banco de dados: %v", err))
+	}
+
+	chirpsJSON := []Chirp{}
+
+	for _, chirp := range chirps {
+		chirpsJSON = append(chirpsJSON, Chirp{
+			ID:        chirp.ID,
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
+			Body:      chirp.Body,
+			UserID:    chirp.UserID,
+		})
+	}
+
+	if err = respondWithJSON(w, http.StatusOK, chirpsJSON); err != nil {
+		log.Printf("erro ao responder a request: %v", err)
+		respondWithError(w, http.StatusInternalServerError, "Erro ao responder com os chirps")
 	}
 }
