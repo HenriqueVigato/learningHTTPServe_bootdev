@@ -84,3 +84,22 @@ func (api *apiConfig) getAllChirps(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "Erro ao responder com os chirps")
 	}
 }
+
+func (api *apiConfig) getChirpsByID(w http.ResponseWriter, r *http.Request) {
+	chirpReqID, err := uuid.Parse(r.PathValue("chirpID"))
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "erro ao obter o id")
+	}
+	chirpRequested, err := api.db.GetChirpByID(r.Context(), chirpReqID)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "")
+	}
+
+	respondWithJSON(w, http.StatusOK, Chirp{
+		ID:        chirpRequested.ID,
+		CreatedAt: chirpRequested.CreatedAt,
+		UpdatedAt: chirpRequested.UpdatedAt,
+		Body:      chirpRequested.Body,
+		UserID:    chirpRequested.UserID,
+	})
+}

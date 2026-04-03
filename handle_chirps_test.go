@@ -109,7 +109,7 @@ func TestGetChirpsByID(t *testing.T) {
 
 	mux.ServeHTTP(w, req)
 
-	if !strings.Contains(w.Body.String(), "Ola eu sou um chrip pra test") {
+	if !strings.Contains(w.Body.String(), "Ola eu sou um chirp pra test") {
 		t.Errorf("nao foi encontrado o chirp desejado, ao inves foi retornado:\n %v", w.Body.String())
 	}
 }
