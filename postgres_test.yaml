@@ -1,7 +1,7 @@
 services:
-  db:
+  db-test:
     image: postgres:16
-    container_name: httpServerLearning
+    container_name: httpServerLearning-test
     shm_size: 128mb
     ports:
       - "5433:5432"
