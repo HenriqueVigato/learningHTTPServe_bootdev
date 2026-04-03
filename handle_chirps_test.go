@@ -72,9 +72,9 @@ func TestGetAllChirps(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/chirps", nil)
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	api.db.GetAllChirps(req.Context())
+	api.getAllChirps(w, req)
 
-	if !strings.Contains(w.Body.String(), "chirp test") {
+	if !strings.Contains(w.Body.String(), "testing the handler chirps") {
 		t.Errorf("Nao foi encontrado o chirp esperado %v", w.Body.String())
 	}
 }
