@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/HenriqueVigato/learningHTTPServe_bootdev/internal/database"
 	"github.com/google/uuid"
 )
 
@@ -76,5 +78,38 @@ func TestGetAllChirps(t *testing.T) {
 
 	if !strings.Contains(w.Body.String(), "testing the handler chirps") {
 		t.Errorf("Nao foi encontrado o chirp esperado %v", w.Body.String())
+	}
+}
+
+func TestGetChirpsByID(t *testing.T) {
+	api, err := getConnectionTestDB(t)
+	if err != nil {
+		t.Fatalf("erro ao preparar o banco de dados para os testes %v", err)
+	}
+
+	user, err := api.db.GetUserByEmail(context.Background(), "user@test.test")
+	if err != nil {
+		t.Fatalf("erro ao buscar o usuario no bando %v", err)
+	}
+
+	chirp, err := api.db.CreateChirp(context.Background(), database.CreateChirpParams{
+		Body:   "Ola eu sou um chirp pra test",
+		UserID: user.ID,
+	})
+	if err != nil {
+		t.Fatalf("erro ao criar um chirp para o teste %v", err)
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/chirps/{chirpID}", api.getChirpsByID)
+
+	req := httptest.NewRequest("GET", fmt.Sprintf("/api/chirps/%s", chirp.ID), nil)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	mux.ServeHTTP(w, req)
+
+	if !strings.Contains(w.Body.String(), "Ola eu sou um chrip pra test") {
+		t.Errorf("nao foi encontrado o chirp desejado, ao inves foi retornado:\n %v", w.Body.String())
 	}
 }
