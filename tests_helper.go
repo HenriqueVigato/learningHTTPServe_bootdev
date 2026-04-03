@@ -27,7 +27,7 @@ func getConnectionTestDB(t *testing.T) (*apiConfig, error) {
 		t.Fatalf("erro ao criar o usuario: %v", err)
 	}
 
-	if err = createChirps(testConfig, user); err != nil {
+	if err = createChirps(&testConfig, user); err != nil {
 		t.Fatalf("%v", err)
 	}
 
@@ -40,7 +40,7 @@ func getConnectionTestDB(t *testing.T) (*apiConfig, error) {
 	return &testConfig, nil
 }
 
-func createChirps(api apiConfig, user database.User) error {
+func createChirps(api *apiConfig, user database.User) error {
 	chirps := []string{
 		"Hello, testing the handler chirps",
 		"I heard that kerfuffle was quite bad",
