@@ -22,6 +22,7 @@ func getConnectionTestDB(t *testing.T) (*apiConfig, error) {
 	testConfig := apiConfig{
 		db:        dbQueries,
 		plataform: "dev",
+		secrete:   "z4Otc/8ibsFtsaCLbfPm8xvmWUuAsz05L9Qr4UNZQ9Nm0Rqk+5qWV46II5zOPM4XMMVLYd8s+jkPzSWe6qzT9w==",
 	}
 	passwordHash, err := auth.HashPassword("password")
 	if err != nil {
