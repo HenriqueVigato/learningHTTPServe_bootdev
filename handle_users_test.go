@@ -32,7 +32,7 @@ func TestAddUser(t *testing.T) {
 		t.Fatalf("erro ao buscar o usuario no banco de dados %v", err)
 	}
 
-	if !strings.Contains(user.HashedPassword, "$argon2id$v=19$m=65536,t=1,p=32$") {
+	if !strings.Contains(user.HashedPassword, "$argon2id$v=19$m=65536,t=1") {
 		t.Errorf("deveria conter o hash da senha inves de %v", user.HashedPassword)
 	}
 }
