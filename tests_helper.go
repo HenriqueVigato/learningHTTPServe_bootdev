@@ -4,14 +4,20 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/HenriqueVigato/learningHTTPServe_bootdev/internal/auth"
 	"github.com/HenriqueVigato/learningHTTPServe_bootdev/internal/database"
+	"github.com/joho/godotenv"
 )
 
 func getConnectionTestDB(t *testing.T) (*apiConfig, error) {
 	DB_URL := "postgres://user:pass123@localhost:5433/chirpy?sslmode=disable"
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println(fmt.Errorf("erro ao carregar as variaveis de ambiente: %v", err))
+	}
 
 	db, err := sql.Open("postgres", DB_URL)
 	if err != nil {
@@ -21,8 +27,8 @@ func getConnectionTestDB(t *testing.T) (*apiConfig, error) {
 
 	testConfig := apiConfig{
 		db:        dbQueries,
-		plataform: "dev",
-		secrete:   "z4Otc/8ibsFtsaCLbfPm8xvmWUuAsz05L9Qr4UNZQ9Nm0Rqk+5qWV46II5zOPM4XMMVLYd8s+jkPzSWe6qzT9w==",
+		plataform: os.Getenv("PLATAFORM"),
+		secrete:   os.Getenv("SECRETE"),
 	}
 	passwordHash, err := auth.HashPassword("password")
 	if err != nil {

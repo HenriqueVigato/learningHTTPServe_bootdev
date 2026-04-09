@@ -16,6 +16,7 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAT time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	Token     string    `json:"token"`
 }
 
 func (api *apiConfig) addUser(w http.ResponseWriter, r *http.Request) {
@@ -58,8 +59,9 @@ func (api *apiConfig) addUser(w http.ResponseWriter, r *http.Request) {
 
 func (api *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 	type params struct {
-		Password string `json:"password"`
-		Email    string `json:"email"`
+		Password         string `json:"password"`
+		Email            string `json:"email"`
+		ExpiresInSeconds int    `json:"expires_in_seconds"`
 	}
 	param := params{}
 
@@ -79,11 +81,22 @@ func (api *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 		log.Printf("erro o comparar a senha com o hash: \n%v", err)
 		respondWithError(w, http.StatusInternalServerError, "")
 	}
+
+	if param.ExpiresInSeconds >= 3600 || param.ExpiresInSeconds == 0 {
+		param.ExpiresInSeconds = 3600
+	}
+
+	token, err := auth.MakeJWT(user.ID, api.secrete, time.Second*time.Duration(param.ExpiresInSeconds))
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "nao foi possivel gerar o token")
+	}
+
 	mapedUser := User{
 		ID:        user.ID,
 		CreatedAt: user.CreatedAt,
 		UpdatedAT: user.UpdatedAt,
 		Email:     user.Email,
+		Token:     token,
 	}
 
 	if correctHash {

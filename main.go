@@ -17,6 +17,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
 	plataform      string
+	secrete        string
 }
 
 func main() {
@@ -38,6 +39,7 @@ func main() {
 		fileserverHits: atomic.Int32{},
 		db:             dbQueries,
 		plataform:      os.Getenv("PLATAFORM"),
+		secrete:        os.Getenv("SECRETE"),
 	}
 	// GET
 	mux.Handle("/app/", http.StripPrefix("/app", apiConf.middlewareMetricsInt(http.HandlerFunc(handleRoot))))

@@ -7,12 +7,14 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/HenriqueVigato/learningHTTPServe_bootdev/internal/auth"
 	"github.com/HenriqueVigato/learningHTTPServe_bootdev/internal/database"
 	"github.com/google/uuid"
 )
 
-func TestHandlerChirps(t *testing.T) {
+func TestAddChirps(t *testing.T) {
 	apiConfig, err := getConnectionTestDB(t)
 	if err != nil {
 		t.Fatalf("nao foi possivel se conectar ao bando de dados %err", err)
@@ -22,10 +24,16 @@ func TestHandlerChirps(t *testing.T) {
 		t.Fatalf("erro a buscar o usuario no bando de dados %v", err)
 	}
 
+	token, err := auth.MakeJWT(user.ID, apiConfig.secrete, time.Hour)
+	if err != nil {
+		t.Fatalf("erro ao gerar o JWTToken %v", err)
+	}
+
 	tests := []struct {
 		name     string
 		body     string
 		userID   uuid.UUID
+		token    string
 		wantCode int
 		wantBody string
 	}{
@@ -33,14 +41,32 @@ func TestHandlerChirps(t *testing.T) {
 			name:     "Valid chirp",
 			body:     "Hello, testing the handler chirps",
 			userID:   user.ID,
+			token:    token, // token válido
 			wantCode: 201,
 			wantBody: "Hello, testing the handler chirps",
 		},
 		{
 			name:     "Too Long chirp",
-			body:     "i'm too long to be added a chirpaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaasadfsafdaslkfdjaslkdfjaslkjflkasjflksajfklsajflksajflkasjdflkjsalkfjlasfjlskfjlskajflksajaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			body:     "i'm too long.........................................................................................................................................................................................................................0.",
 			userID:   user.ID,
+			token:    token, // token válido, falha pelo tamanho
 			wantCode: 406,
+			wantBody: "error",
+		},
+		{
+			name:     "Missing token",
+			body:     "Hello",
+			userID:   user.ID,
+			token:    "", // sem token
+			wantCode: 401,
+			wantBody: "error",
+		},
+		{
+			name:     "Invalid token",
+			body:     "Hello",
+			userID:   user.ID,
+			token:    "Bearer invalido.token.aqui",
+			wantCode: 401,
 			wantBody: "error",
 		},
 	}
@@ -50,6 +76,7 @@ func TestHandlerChirps(t *testing.T) {
 			input := fmt.Sprintf(`{"body":"%v","user_id":"%v"}`, tt.body, tt.userID)
 			req := httptest.NewRequest("POST", "/api/chirps", strings.NewReader(input))
 			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tt.token))
 			w := httptest.NewRecorder()
 
 			apiConfig.addChirps(w, req)
