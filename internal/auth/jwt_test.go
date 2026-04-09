@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -114,4 +115,48 @@ func TestParseJWT(t *testing.T) {
 			t.Errorf("era esperado que o id retornado fosse nil")
 		}
 	})
+}
+
+func TestGetBearerToken(t *testing.T) {
+	tests := []struct {
+		name        string
+		headers     http.Header
+		expected    string
+		expectError bool
+	}{
+		{
+			name:        "valid bearer token",
+			headers:     http.Header{"Authorization": []string{"Bearer mytoken123"}},
+			expected:    "mytoken123",
+			expectError: false,
+		},
+		{
+			name:        "missing authorization header",
+			headers:     http.Header{},
+			expected:    "",
+			expectError: true,
+		},
+		{
+			name:        "empty authorization value",
+			headers:     http.Header{"Authorization": []string{""}},
+			expected:    "",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			token, err := GetBearerToken(tt.headers)
+
+			if tt.expectError && err == nil {
+				t.Error("expected error but got nil")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+			if token != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, token)
+			}
+		})
+	}
 }
