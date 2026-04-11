@@ -56,6 +56,18 @@ func TestLoginUser(t *testing.T) {
 			wantedBody: "user@test.test",
 		},
 		{
+			name:       "Correct test - verifica token e refresh_token",
+			body:       `{"email":"user@test.test","password":"password"}`,
+			wantedCode: 200,
+			wantedBody: "token",
+		},
+		{
+			name:       "Correct test - verifica refresh_token",
+			body:       `{"email":"user@test.test","password":"password"}`,
+			wantedCode: 200,
+			wantedBody: "refresh_token",
+		},
+		{
 			name:       "Incorrect password",
 			body:       `{"email":"user@test.test","password":"wrongpassword"}`,
 			wantedCode: 401,
@@ -65,18 +77,18 @@ func TestLoginUser(t *testing.T) {
 
 	for _, tc := range testsCase {
 		t.Run(tc.name, func(t *testing.T) {
-			req := httptest.NewRequest("POST", "/api/users", strings.NewReader(tc.body))
+			req := httptest.NewRequest("POST", "/api/login", strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
 
 			apiConfig.loginUser(w, req)
 
 			if w.Code != tc.wantedCode {
-				t.Errorf("deveria retorar o %d inves de: %v", tc.wantedCode, w.Code)
+				t.Errorf("deveria retornar %d instead de: %v", tc.wantedCode, w.Code)
 			}
 
 			if !strings.Contains(w.Body.String(), tc.wantedBody) {
-				t.Errorf("deveria retornar o usuario inves de: \n%v", w.Body.String())
+				t.Errorf("deveria retornar '%v' inves de: \n%v", tc.wantedBody, w.Body.String())
 			}
 		})
 	}

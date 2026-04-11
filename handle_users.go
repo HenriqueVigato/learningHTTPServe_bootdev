@@ -12,11 +12,12 @@ import (
 )
 
 type User struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAT time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
-	Token     string    `json:"token"`
+	ID           uuid.UUID `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAT    time.Time `json:"updated_at"`
+	Email        string    `json:"email"`
+	Token        string    `json:"token"`
+	RefreshToken string    `json:"refresh_token"`
 }
 
 func (api *apiConfig) addUser(w http.ResponseWriter, r *http.Request) {
@@ -59,49 +60,62 @@ func (api *apiConfig) addUser(w http.ResponseWriter, r *http.Request) {
 
 func (api *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 	type params struct {
-		Password         string `json:"password"`
-		Email            string `json:"email"`
-		ExpiresInSeconds int    `json:"expires_in_seconds"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
 	}
 	param := params{}
 
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&param); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request body")
+		return
 	}
 
 	user, err := api.db.GetUserByEmail(r.Context(), param.Email)
 	if err != nil {
 		log.Printf("erro ao buscar o usuario no banco de dados: \n %v", err)
 		respondWithError(w, http.StatusInternalServerError, "")
+		return
 	}
 
 	correctHash, err := auth.CheckPasswordHash(param.Password, user.HashedPassword)
 	if err != nil {
 		log.Printf("erro o comparar a senha com o hash: \n%v", err)
 		respondWithError(w, http.StatusInternalServerError, "")
+		return
+	}
+	if !correctHash {
+		respondWithError(w, http.StatusUnauthorized, "something is wrong whith your input")
+		return
 	}
 
-	if param.ExpiresInSeconds >= 3600 || param.ExpiresInSeconds == 0 {
-		param.ExpiresInSeconds = 3600
-	}
-
-	token, err := auth.MakeJWT(user.ID, api.secrete, time.Second*time.Duration(param.ExpiresInSeconds))
+	token, err := auth.MakeJWT(user.ID, api.secrete, 0)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "nao foi possivel gerar o token")
+		return
+	}
+
+	// Registra o refresh_token no banco de dados
+	refreshToken := auth.MakeRefreshToken()
+	refreshParams := database.CreateRefreshTokenParams{
+		Token:     refreshToken,
+		UserID:    user.ID,
+		ExpiresAt: time.Now().UTC().AddDate(0, 0, 60),
+	}
+	refreshTokenDB, err := api.db.CreateRefreshToken(r.Context(), refreshParams)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "erro ao registrar o refresh token")
+		return
 	}
 
 	mapedUser := User{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAT: user.UpdatedAt,
-		Email:     user.Email,
-		Token:     token,
+		ID:           user.ID,
+		CreatedAt:    user.CreatedAt,
+		UpdatedAT:    user.UpdatedAt,
+		Email:        user.Email,
+		Token:        token,
+		RefreshToken: refreshTokenDB.Token,
 	}
 
-	if correctHash {
-		respondWithJSON(w, http.StatusOK, mapedUser)
-	} else {
-		respondWithError(w, http.StatusUnauthorized, "")
-	}
+	respondWithJSON(w, http.StatusOK, mapedUser)
 }

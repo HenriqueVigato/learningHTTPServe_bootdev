@@ -12,6 +12,9 @@ import (
 
 func MakeJWT(userID uuid.UUID, tokensSecret string, expiresIn time.Duration) (string, error) {
 	claims := jwt.RegisteredClaims{}
+	if expiresIn == 0 {
+		expiresIn = time.Hour
+	}
 
 	claims.Issuer = "chirpy-access"
 	claims.IssuedAt = jwt.NewNumericDate(time.Now())
