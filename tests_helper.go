@@ -51,6 +51,7 @@ func getConnectionTestDB(t *testing.T) (*apiConfig, error) {
 	t.Cleanup(func() {
 		db.Exec("DELETE FROM users")
 		db.Exec("DELETE FROM chirps")
+		db.Exec("DELETE FROM refresh_tokens")
 		db.Close()
 	})
 
