@@ -53,6 +53,8 @@ func main() {
 	mux.HandleFunc("POST /api/chirps", apiConf.addChirps)
 	mux.HandleFunc("POST /api/users", apiConf.addUser)
 	mux.HandleFunc("POST /api/login", apiConf.loginUser)
+	mux.HandleFunc("POST /api/refresh", apiConf.validateRefreshToken)
+	mux.HandleFunc("POST /api/revoke", apiConf.revokeRefreshToken)
 
 	srv := http.Server{
 		Addr:    "localhost:8080",
