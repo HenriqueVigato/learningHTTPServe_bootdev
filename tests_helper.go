@@ -30,6 +30,11 @@ func getConnectionTestDB(t *testing.T) (*apiConfig, error) {
 		plataform: os.Getenv("PLATAFORM"),
 		secrete:   os.Getenv("SECRETE"),
 	}
+
+	db.Exec("DELETE FROM refresh_tokens")
+	db.Exec("DELETE FROM users")
+	db.Exec("DELETE FROM chirps")
+
 	passwordHash, err := auth.HashPassword("password")
 	if err != nil {
 		t.Fatalf("erro ao hashear a senha %v", err)
@@ -49,9 +54,9 @@ func getConnectionTestDB(t *testing.T) (*apiConfig, error) {
 	}
 
 	t.Cleanup(func() {
+		db.Exec("DELETE FROM refresh_tokens")
 		db.Exec("DELETE FROM users")
 		db.Exec("DELETE FROM chirps")
-		db.Exec("DELETE FROM refresh_tokens")
 		db.Close()
 	})
 
