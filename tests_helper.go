@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/rand/v2"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/HenriqueVigato/learningHTTPServe_bootdev/internal/auth"
@@ -49,7 +51,20 @@ func getConnectionTestDB(t *testing.T) (*apiConfig, error) {
 		t.Fatalf("erro ao criar o usuario: %v", err)
 	}
 
+	user1Params := database.CreateUserParams{
+		Email:          "user1@test.test",
+		HashedPassword: passwordHash,
+	}
+	user1, err := testConfig.db.CreateUser(context.Background(), user1Params)
+	if err != nil {
+		t.Fatalf("erro ao criar o usuario: %v", err)
+	}
+
 	if err = createChirps(&testConfig, user); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	if err = createChirps(&testConfig, user1); err != nil {
 		t.Fatalf("%v", err)
 	}
 
@@ -75,7 +90,7 @@ func createChirps(api *apiConfig, user database.User) error {
 
 	for _, body := range chirps {
 		_, err := api.db.CreateChirp(context.Background(), database.CreateChirpParams{
-			Body:   body,
+			Body:   body + strconv.Itoa(rand.IntN(39999)),
 			UserID: user.ID,
 		})
 		if err != nil {
