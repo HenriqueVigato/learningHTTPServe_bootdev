@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/rand/v2"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -138,5 +139,81 @@ func TestGetChirpsByID(t *testing.T) {
 
 	if !strings.Contains(w.Body.String(), "Ola eu sou um chirp pra test") {
 		t.Errorf("nao foi encontrado o chirp desejado, ao inves foi retornado:\n %v", w.Body.String())
+	}
+}
+
+func TestDeleteChirp(t *testing.T) {
+	api, err := getConnectionTestDB(t)
+	if err != nil {
+		t.Fatalf("erro ao preparar o banco de dados para teste %v", err)
+	}
+
+	user, err := api.db.GetUserByEmail(context.Background(), "user@test.test")
+	if err != nil {
+		t.Fatalf("erro ao buscar o usuario %v", err)
+	}
+	userToken, err := auth.MakeJWT(user.ID, api.secrete, time.Hour)
+	if err != nil {
+		t.Fatalf("erro ao geraro o JWTToken %err", err)
+	}
+
+	user1, err := api.db.GetUserByEmail(context.Background(), "user1@test.test")
+	if err != nil {
+		t.Fatalf("erro ao buscar o usuario %v", err)
+	}
+
+	user1Token, err := auth.MakeJWT(user1.ID, api.secrete, time.Hour)
+	if err != nil {
+		t.Fatalf("erro ao geraro o JWTToken %err", err)
+	}
+
+	testCases := []struct {
+		name       string
+		header     http.Header
+		wantedCode int
+	}{
+		{
+			name:       "wrongAuthor",
+			header:     http.Header{"Authorization": []string{"Bearer " + user1Token}},
+			wantedCode: 403,
+		},
+		{
+			name:       "Chirp not found",
+			header:     http.Header{"Authorization": []string{"Bearer " + userToken}},
+			wantedCode: 404,
+		},
+		{
+			name:       "Succes delete",
+			header:     http.Header{"Authorization": []string{"Bearer " + userToken}},
+			wantedCode: 204,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var chirp database.Chirp
+			if tc.name != "Chirp not found" {
+				chirp, _ = api.db.CreateChirp(context.Background(), database.CreateChirpParams{
+					Body:   fmt.Sprintf("ola eu sou um chirp Aleatorio %d", rand.IntN(234234)),
+					UserID: user.ID,
+				})
+			} else {
+				chirp = database.Chirp{
+					ID: uuid.New(),
+				}
+			}
+
+			req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/chirps/%v", chirp.ID), strings.NewReader(""))
+			req.SetPathValue("chirpID", chirp.ID.String())
+			req.Header = tc.header
+			w := httptest.NewRecorder()
+
+			api.deleteChirp(w, req)
+
+			if w.Code != tc.wantedCode {
+				t.Errorf("status code recived (%v) != spected (%v).", w.Code, tc.wantedCode)
+				t.Logf("Erro: \n%v", w.Body.String())
+			}
+		})
 	}
 }
