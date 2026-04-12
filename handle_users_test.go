@@ -6,6 +6,9 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/HenriqueVigato/learningHTTPServe_bootdev/internal/auth"
 )
 
 func TestAddUser(t *testing.T) {
@@ -89,6 +92,71 @@ func TestLoginUser(t *testing.T) {
 
 			if !strings.Contains(w.Body.String(), tc.wantedBody) {
 				t.Errorf("deveria retornar '%v' inves de: \n%v", tc.wantedBody, w.Body.String())
+			}
+		})
+	}
+}
+
+func TestUpdateUser(t *testing.T) {
+	apiConfig, err := getConnectionTestDB(t)
+	if err != nil {
+		t.Fatalf("erro ao preparar o banco de dados %v", err)
+	}
+
+	user, err := apiConfig.db.GetUserByEmail(context.Background(), "user@test.test")
+	if err != nil {
+		t.Fatalf("erro ao buscar o usuario %v", err)
+	}
+
+	jwtToken, err := auth.MakeJWT(user.ID, apiConfig.secrete, time.Hour)
+	if err != nil {
+		t.Fatalf("erro ao ober um jwtToken %v", err)
+	}
+
+	testsCase := []struct {
+		name       string
+		body       string
+		header     http.Header
+		wantedCode int
+		wantedBody string
+	}{
+		{
+			name:       "without token",
+			body:       `{"email":"user@test.test", "password":"souUmaSenhaNova"}`,
+			header:     http.Header{"Authorization": []string{"Bearer"}},
+			wantedCode: 401,
+			wantedBody: "error",
+		},
+		{
+			name:       "invalide token",
+			body:       `{"email":"user@test.test", "password":"souUmaSenhaNova"}`,
+			header:     http.Header{"Authorization": []string{"Bearer invalid token"}},
+			wantedCode: 401,
+			wantedBody: "error",
+		},
+		{
+			name:       "valid token",
+			body:       `{"email":"user@test.test", "password":"souUmaSenhaNova"}`,
+			header:     http.Header{"Authorization": []string{"Bearer " + jwtToken}},
+			wantedCode: 200,
+			wantedBody: `"email":"user@test.test"`,
+		},
+	}
+
+	for _, tc := range testsCase {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest("PUT", "/api/users", strings.NewReader(tc.body))
+			req.Header = tc.header
+			w := httptest.NewRecorder()
+
+			apiConfig.updateUser(w, req)
+
+			if w.Code != tc.wantedCode {
+				t.Errorf("codigo obtido(%v) diferente do esperado(%d)", w.Code, tc.wantedCode)
+			}
+
+			if !strings.Contains(w.Body.String(), tc.wantedBody) {
+				t.Errorf("body obtido diferente do esperado %v", w.Body.String())
 			}
 		})
 	}
