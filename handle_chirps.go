@@ -1,7 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -109,7 +111,7 @@ func (api *apiConfig) getChirpsByID(w http.ResponseWriter, r *http.Request) {
 	}
 	chirpRequested, err := api.db.GetChirpByID(r.Context(), chirpReqID)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "")
+		respondWithError(w, http.StatusNotFound, err.Error())
 		return
 	}
 
@@ -120,4 +122,46 @@ func (api *apiConfig) getChirpsByID(w http.ResponseWriter, r *http.Request) {
 		Body:      chirpRequested.Body,
 		UserID:    chirpRequested.UserID,
 	})
+}
+
+func (api *apiConfig) deleteChirp(w http.ResponseWriter, r *http.Request) {
+	chirpReqID, err := uuid.Parse(r.PathValue("chirpID"))
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "erro ao obter o id")
+		return
+	}
+
+	userToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	userID, err := auth.ValidateJWT(userToken, api.secrete)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	databaseChirp, err := api.db.GetChirpByID(r.Context(), chirpReqID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			respondWithError(w, http.StatusNotFound, "")
+			return
+		}
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if databaseChirp.UserID != userID {
+		respondWithError(w, http.StatusForbidden, "Nao pode deletar chirps dos coleguinhas")
+		return
+	}
+
+	err = api.db.DeleteChirpByID(r.Context(), chirpReqID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -59,6 +59,9 @@ func main() {
 	// PUT
 	mux.HandleFunc("PUT /api/users", api.updateUser)
 
+	// DELETE
+	mux.HandleFunc("DELETE /api/chirps/{chirpID}", api.deleteChirp)
+
 	srv := http.Server{
 		Addr:    "localhost:8080",
 		Handler: mux,
