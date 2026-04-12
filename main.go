@@ -35,26 +35,29 @@ func main() {
 	dbQueries := database.New(db)
 	mux := http.NewServeMux()
 
-	apiConf := apiConfig{
+	api := apiConfig{
 		fileserverHits: atomic.Int32{},
 		db:             dbQueries,
 		plataform:      os.Getenv("PLATAFORM"),
 		secrete:        os.Getenv("SECRETE"),
 	}
 	// GET
-	mux.Handle("/app/", http.StripPrefix("/app", apiConf.middlewareMetricsInt(http.HandlerFunc(handleRoot))))
+	mux.Handle("/app/", http.StripPrefix("/app", api.middlewareMetricsInt(http.HandlerFunc(handleRoot))))
 	mux.HandleFunc("GET /api/healthz", handleHealth)
-	mux.HandleFunc("GET /admin/metrics", apiConf.metrics)
-	mux.HandleFunc("GET /api/chirps", apiConf.getAllChirps)
-	mux.HandleFunc("GET /api/chirps/{chirpID}", apiConf.getChirpsByID)
+	mux.HandleFunc("GET /admin/metrics", api.metrics)
+	mux.HandleFunc("GET /api/chirps", api.getAllChirps)
+	mux.HandleFunc("GET /api/chirps/{chirpID}", api.getChirpsByID)
 
 	// POST
-	mux.HandleFunc("POST /admin/reset", apiConf.reset)
-	mux.HandleFunc("POST /api/chirps", apiConf.addChirps)
-	mux.HandleFunc("POST /api/users", apiConf.addUser)
-	mux.HandleFunc("POST /api/login", apiConf.loginUser)
-	mux.HandleFunc("POST /api/refresh", apiConf.validateRefreshToken)
-	mux.HandleFunc("POST /api/revoke", apiConf.revokeRefreshToken)
+	mux.HandleFunc("POST /admin/reset", api.reset)
+	mux.HandleFunc("POST /api/chirps", api.addChirps)
+	mux.HandleFunc("POST /api/users", api.addUser)
+	mux.HandleFunc("POST /api/login", api.loginUser)
+	mux.HandleFunc("POST /api/refresh", api.validateRefreshToken)
+	mux.HandleFunc("POST /api/revoke", api.revokeRefreshToken)
+
+	// PUT
+	mux.HandleFunc("PUT /api/users", api.updateUser)
 
 	srv := http.Server{
 		Addr:    "localhost:8080",

@@ -119,3 +119,62 @@ func (api *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 
 	respondWithJSON(w, http.StatusOK, mapedUser)
 }
+
+func (api *apiConfig) updateUser(w http.ResponseWriter, r *http.Request) {
+	type requestParams struct {
+		Password string `json:"password"`
+		Email    string `json:"email"`
+		Token    string `json:"token"`
+	}
+
+	param := requestParams{}
+	var err error
+
+	param.Token, err = auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "nao foi possivel localizar o token")
+		return
+	}
+
+	userByToken, err := auth.ValidateJWT(param.Token, api.secrete)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "token Invalido")
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	if err = decoder.Decode(&param); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid reqcuest body")
+		return
+	}
+
+	hashedPassword, err := auth.HashPassword(param.Password)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "")
+		log.Printf("erro ao hashear a senha %v", err)
+		return
+	}
+
+	updateArgs := database.UpdateUserParams{
+		Email:          param.Email,
+		HashedPassword: hashedPassword,
+		ID:             userByToken,
+	}
+
+	updatedUser, err := api.db.UpdateUser(r.Context(), updateArgs)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "")
+		log.Printf("erro ao atualizar o usuario %v", err)
+		return
+	}
+
+	mapedUser := User{
+		ID:        updatedUser.ID,
+		CreatedAt: updatedUser.CreatedAt,
+		UpdatedAT: updatedUser.UpdatedAt,
+		Email:     updatedUser.Email,
+		Token:     param.Token,
+	}
+
+	respondWithJSON(w, http.StatusOK, mapedUser)
+}
