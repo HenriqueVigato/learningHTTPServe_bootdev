@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -157,6 +158,74 @@ func TestUpdateUser(t *testing.T) {
 
 			if !strings.Contains(w.Body.String(), tc.wantedBody) {
 				t.Errorf("body obtido diferente do esperado %v", w.Body.String())
+			}
+		})
+	}
+}
+
+func TestUpdateUserRed(t *testing.T) {
+	apiConfig, err := getConnectionTestDB(t)
+	if err != nil {
+		t.Fatalf("erro ao preparar o banco de dados %v", err)
+	}
+
+	user, err := apiConfig.db.GetUserByEmail(context.Background(), "user@test.test")
+	if err != nil {
+		t.Fatalf("erro ao buscar o usuario %v", err)
+	}
+	testsCase := []struct {
+		name       string
+		body       string
+		wantedCode int
+		checkDB    bool
+	}{
+		{
+			name:       "successful operation",
+			body:       fmt.Sprintf(`{"event":"user.upgraded","data":{"user_id":"%v"}}`, user.ID),
+			wantedCode: 204,
+		}, {
+			name:       "wrong type of end point",
+			body:       `{"event":"something else","data":{"user_id":"3311741c-680c-4546-99f3-fc9efac2036c"}}`,
+			wantedCode: 204,
+		}, {
+			name:       "user not found",
+			body:       `{"event":"user.upgraded","data":{"user_id":"3311741c-680c-4546-99f3-fc9efac2036c"}}`,
+			wantedCode: 404,
+		}, {
+			name:       "invalid JSON",
+			body:       `{"`,
+			wantedCode: 400,
+		}, {
+			name:       "missing user",
+			body:       `{"event":"user.upgraded","data":{"user_id":""}}`,
+			wantedCode: 400,
+		}, {
+			name:       "missing body",
+			body:       "",
+			wantedCode: 400,
+		},
+	}
+
+	for _, tc := range testsCase {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest("POST", "/api/polka/webhooks", strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+
+			apiConfig.updateUserRed(w, req)
+
+			if tc.wantedCode != w.Code {
+				t.Errorf("codigo obtido(%v) diferente do esperado(%d)", w.Code, tc.wantedCode)
+			}
+			if tc.name == "successful operation" {
+				updatedUser, err := apiConfig.db.GetUserByEmail(context.Background(), "user@test.test")
+				if err != nil {
+					t.Fatalf("erro ao buscar o usuario %v", err)
+				}
+
+				if !updatedUser.IsChirpyRed {
+					t.Error("Era esperado que o IsChirpyRed fosse true e nao false")
+				}
 			}
 		})
 	}
