@@ -1,7 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -18,6 +20,7 @@ type User struct {
 	Email        string    `json:"email"`
 	Token        string    `json:"token"`
 	RefreshToken string    `json:"refresh_token"`
+	IsChirpyRed  bool      `json:"is_chirpy_red"`
 }
 
 func (api *apiConfig) addUser(w http.ResponseWriter, r *http.Request) {
@@ -48,10 +51,11 @@ func (api *apiConfig) addUser(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "Could not create user")
 	}
 	mapedUser := User{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAT: user.UpdatedAt,
-		Email:     user.Email,
+		ID:          user.ID,
+		CreatedAt:   user.CreatedAt,
+		UpdatedAT:   user.UpdatedAt,
+		Email:       user.Email,
+		IsChirpyRed: user.IsChirpyRed,
 	}
 	if err = respondWithJSON(w, http.StatusCreated, mapedUser); err != nil {
 		log.Printf("erro ao responder a request %v", err)
@@ -115,6 +119,7 @@ func (api *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 		Email:        user.Email,
 		Token:        token,
 		RefreshToken: refreshTokenDB.Token,
+		IsChirpyRed:  user.IsChirpyRed,
 	}
 
 	respondWithJSON(w, http.StatusOK, mapedUser)
@@ -169,12 +174,52 @@ func (api *apiConfig) updateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mapedUser := User{
-		ID:        updatedUser.ID,
-		CreatedAt: updatedUser.CreatedAt,
-		UpdatedAT: updatedUser.UpdatedAt,
-		Email:     updatedUser.Email,
-		Token:     param.Token,
+		ID:          updatedUser.ID,
+		CreatedAt:   updatedUser.CreatedAt,
+		UpdatedAT:   updatedUser.UpdatedAt,
+		Email:       updatedUser.Email,
+		Token:       param.Token,
+		IsChirpyRed: updatedUser.IsChirpyRed,
 	}
 
 	respondWithJSON(w, http.StatusOK, mapedUser)
+}
+
+func (api *apiConfig) updateUserRed(w http.ResponseWriter, r *http.Request) {
+	type requestParams struct {
+		Event string `json:"event"`
+		Data  struct {
+			UserID uuid.UUID `json:"user_id"`
+		} `json:"data"`
+	}
+
+	params := requestParams{}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&params); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if params.Event != "user.upgraded" {
+		respondWithJSON(w, http.StatusNoContent, "")
+		return
+	}
+
+	userRedParams := database.UpdateUserRedParams{
+		IsChirpyRed: true,
+		ID:          params.Data.UserID,
+	}
+
+	_, err := api.db.UpdateUserRed(r.Context(), userRedParams)
+	if err == sql.ErrNoRows {
+		respondWithError(w, http.StatusNotFound, "User not found")
+		return
+	}
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("%v", err))
+		return
+	}
+
+	respondWithJSON(w, http.StatusNoContent, "")
 }
