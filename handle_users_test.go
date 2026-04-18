@@ -164,6 +164,7 @@ func TestUpdateUser(t *testing.T) {
 }
 
 func TestUpdateUserRed(t *testing.T) {
+	const testApikey = "ApiKey f271c81ff7084ee5b99a5091b42d486e"
 	apiConfig, err := getConnectionTestDB(t)
 	if err != nil {
 		t.Fatalf("erro ao preparar o banco de dados %v", err)
@@ -175,41 +176,66 @@ func TestUpdateUserRed(t *testing.T) {
 	}
 	testsCase := []struct {
 		name       string
+		header     http.Header
 		body       string
 		wantedCode int
 		checkDB    bool
 	}{
 		{
 			name:       "successful operation",
+			header:     http.Header{"Authorization": []string{testApikey}},
 			body:       fmt.Sprintf(`{"event":"user.upgraded","data":{"user_id":"%v"}}`, user.ID),
 			wantedCode: 204,
+			checkDB:    true,
+		}, {
+			name:       "invalid apikey",
+			header:     http.Header{"Authorization": []string{"ApiKey f271c091b42d486e"}},
+			body:       fmt.Sprintf(`{"event":"user.upgraded","data":{"user_id":"%v"}}`, user.ID),
+			wantedCode: 401,
+			checkDB:    false,
 		}, {
 			name:       "wrong type of end point",
+			header:     http.Header{"Authorization": []string{testApikey}},
 			body:       `{"event":"something else","data":{"user_id":"3311741c-680c-4546-99f3-fc9efac2036c"}}`,
 			wantedCode: 204,
+			checkDB:    false,
 		}, {
 			name:       "user not found",
+			header:     http.Header{"Authorization": []string{testApikey}},
 			body:       `{"event":"user.upgraded","data":{"user_id":"3311741c-680c-4546-99f3-fc9efac2036c"}}`,
 			wantedCode: 404,
+			checkDB:    false,
 		}, {
 			name:       "invalid JSON",
+			header:     http.Header{"Authorization": []string{testApikey}},
 			body:       `{"`,
 			wantedCode: 400,
+			checkDB:    false,
 		}, {
 			name:       "missing user",
+			header:     http.Header{"Authorization": []string{testApikey}},
+			body:       `{"event":"user.upgraded","data":{}}`,
+			wantedCode: 400,
+			checkDB:    false,
+		}, {
+			name:       "missing user",
+			header:     http.Header{"Authorization": []string{testApikey}},
 			body:       `{"event":"user.upgraded","data":{"user_id":""}}`,
 			wantedCode: 400,
+			checkDB:    false,
 		}, {
 			name:       "missing body",
+			header:     http.Header{"Authorization": []string{testApikey}},
 			body:       "",
 			wantedCode: 400,
+			checkDB:    false,
 		},
 	}
 
 	for _, tc := range testsCase {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest("POST", "/api/polka/webhooks", strings.NewReader(tc.body))
-			req.Header.Set("Content-Type", "application/json")
+			req.Header = tc.header
 			w := httptest.NewRecorder()
 
 			apiConfig.updateUserRed(w, req)
@@ -217,7 +243,7 @@ func TestUpdateUserRed(t *testing.T) {
 			if tc.wantedCode != w.Code {
 				t.Errorf("codigo obtido(%v) diferente do esperado(%d)", w.Code, tc.wantedCode)
 			}
-			if tc.name == "successful operation" {
+			if tc.checkDB {
 				updatedUser, err := apiConfig.db.GetUserByEmail(context.Background(), "user@test.test")
 				if err != nil {
 					t.Fatalf("erro ao buscar o usuario %v", err)

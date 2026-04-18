@@ -31,6 +31,7 @@ func getConnectionTestDB(t *testing.T) (*apiConfig, error) {
 		db:        dbQueries,
 		plataform: os.Getenv("PLATAFORM"),
 		secrete:   os.Getenv("SECRETE"),
+		polka:     os.Getenv("POLKA"),
 	}
 
 	db.Exec("DELETE FROM refresh_tokens")

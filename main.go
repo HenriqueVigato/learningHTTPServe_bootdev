@@ -18,6 +18,7 @@ type apiConfig struct {
 	db             *database.Queries
 	plataform      string
 	secrete        string
+	polka          string
 }
 
 func main() {
@@ -40,6 +41,7 @@ func main() {
 		db:             dbQueries,
 		plataform:      os.Getenv("PLATAFORM"),
 		secrete:        os.Getenv("SECRETE"),
+		polka:          os.Getenv("POLKA"),
 	}
 	// GET
 	mux.Handle("/app/", http.StripPrefix("/app", api.middlewareMetricsInt(http.HandlerFunc(handleRoot))))

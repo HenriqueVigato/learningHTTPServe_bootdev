@@ -195,10 +195,25 @@ func (api *apiConfig) updateUserRed(w http.ResponseWriter, r *http.Request) {
 
 	params := requestParams{}
 
+	APIKey, err := auth.GetApiKey(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "")
+		return
+	}
+
+	if APIKey != api.polka {
+		respondWithError(w, http.StatusUnauthorized, "")
+		return
+	}
+
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&params); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request body")
 		return
+	}
+
+	if params.Data.UserID == uuid.Nil {
+		respondWithError(w, http.StatusBadRequest, "missing user_id")
 	}
 
 	if params.Event != "user.upgraded" {
@@ -211,7 +226,7 @@ func (api *apiConfig) updateUserRed(w http.ResponseWriter, r *http.Request) {
 		ID:          params.Data.UserID,
 	}
 
-	_, err := api.db.UpdateUserRed(r.Context(), userRedParams)
+	_, err = api.db.UpdateUserRed(r.Context(), userRedParams)
 	if err == sql.ErrNoRows {
 		respondWithError(w, http.StatusNotFound, "User not found")
 		return
