@@ -146,6 +146,91 @@ func TestGetChirpsByUserID(t *testing.T) {
 	}
 }
 
+func TestSortChirp(t *testing.T) {
+	api, err := getConnectionTestDB(t)
+	if err != nil {
+		t.Fatalf("error preparing the database: %v", err)
+	}
+
+	chirps, err := getAllChirps(api)
+	if err != nil {
+		t.Fatalf("error fetching chirps: %v", err)
+	}
+
+	if len(chirps) == 0 {
+		t.Fatal("expected chirps in the database but got none")
+	}
+
+	testCases := []struct {
+		name        string
+		order       string
+		expectError bool
+		validate    func(t *testing.T, chirps []database.Chirp)
+	}{
+		{
+			name:        "sort ascending",
+			order:       "asc",
+			expectError: false,
+			validate: func(t *testing.T, chirps []database.Chirp) {
+				for i := 1; i < len(chirps); i++ {
+					if chirps[i].CreatedAt.Before(chirps[i-1].CreatedAt) {
+						t.Errorf("expected ascending order but got wrong order at index %d", i)
+					}
+				}
+			},
+		},
+		{
+			name:        "sort descending",
+			order:       "desc",
+			expectError: false,
+			validate: func(t *testing.T, chirps []database.Chirp) {
+				for i := 1; i < len(chirps); i++ {
+					if chirps[i].CreatedAt.After(chirps[i-1].CreatedAt) {
+						t.Errorf("expected descending order but got wrong order at index %d", i)
+					}
+				}
+			},
+		},
+		{
+			name:        "invalid order",
+			order:       "random",
+			expectError: true,
+			validate:    nil,
+		},
+		{
+			name:        "empty order",
+			order:       "",
+			expectError: true,
+			validate:    nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sorted, err := sortChirp(chirps, tc.order)
+
+			if tc.expectError {
+				if err == nil {
+					t.Errorf("expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if len(sorted) == 0 {
+				t.Fatal("expected chirps but got empty slice")
+			}
+
+			if tc.validate != nil {
+				tc.validate(t, sorted)
+			}
+		})
+	}
+}
+
 func TestGetChirpsByID(t *testing.T) {
 	api, err := getConnectionTestDB(t)
 	if err != nil {

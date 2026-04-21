@@ -5,8 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/HenriqueVigato/learningHTTPServe_bootdev/internal/auth"
@@ -79,6 +81,7 @@ func (api *apiConfig) addChirps(w http.ResponseWriter, r *http.Request) {
 
 func (api *apiConfig) getChirps(w http.ResponseWriter, r *http.Request) {
 	authorID := r.URL.Query().Get("author_id")
+	order := r.URL.Query().Get("sort")
 	var chirps []database.Chirp
 	var err error
 
@@ -94,6 +97,10 @@ func (api *apiConfig) getChirps(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusInternalServerError, "erro ao obter os chirps")
 			return
 		}
+	}
+
+	if order != "" {
+		sortChirp(chirps, order)
 	}
 
 	chirpsJSON := []Chirp{}
@@ -134,6 +141,22 @@ func getChirpByUserID(api *apiConfig, userID string) ([]database.Chirp, error) {
 		return nil, err
 	}
 	return chirps, nil
+}
+
+func sortChirp(arrayChirp []database.Chirp, order string) ([]database.Chirp, error) {
+	switch order {
+	case "asc":
+		sort.Slice(arrayChirp, func(i, j int) bool {
+			return arrayChirp[i].CreatedAt.Before(arrayChirp[j].CreatedAt)
+		})
+	case "desc":
+		sort.Slice(arrayChirp, func(i, j int) bool {
+			return arrayChirp[i].CreatedAt.After(arrayChirp[j].CreatedAt)
+		})
+	default:
+		return nil, fmt.Errorf("invalid order value: %s, must be 'asc' or 'desc'", order)
+	}
+	return arrayChirp, nil
 }
 
 func (api *apiConfig) getChirpsByID(w http.ResponseWriter, r *http.Request) {
