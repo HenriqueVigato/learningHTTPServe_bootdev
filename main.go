@@ -47,7 +47,7 @@ func main() {
 	mux.Handle("/app/", http.StripPrefix("/app", api.middlewareMetricsInt(http.HandlerFunc(handleRoot))))
 	mux.HandleFunc("GET /api/healthz", handleHealth)
 	mux.HandleFunc("GET /admin/metrics", api.metrics)
-	mux.HandleFunc("GET /api/chirps", api.getAllChirps)
+	mux.HandleFunc("GET /api/chirps", api.getChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", api.getChirpsByID)
 
 	// POST

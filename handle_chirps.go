@@ -1,10 +1,10 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -77,11 +77,23 @@ func (api *apiConfig) addChirps(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (api *apiConfig) getAllChirps(w http.ResponseWriter, r *http.Request) {
-	chirps, err := api.db.GetAllChirps(r.Context())
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Erro ao buscar os chirps no banco de dados: %v", err))
-		return
+func (api *apiConfig) getChirps(w http.ResponseWriter, r *http.Request) {
+	authorID := r.URL.Query().Get("author_id")
+	var chirps []database.Chirp
+	var err error
+
+	if authorID == "" {
+		chirps, err = getAllChirps(api)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "erro ao obter os chirps")
+			return
+		}
+	} else {
+		chirps, err = getChirpByUserID(api, authorID)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "erro ao obter os chirps")
+			return
+		}
 	}
 
 	chirpsJSON := []Chirp{}
@@ -101,6 +113,27 @@ func (api *apiConfig) getAllChirps(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "Erro ao responder com os chirps")
 		return
 	}
+}
+
+func getAllChirps(api *apiConfig) ([]database.Chirp, error) {
+	chirps, err := api.db.GetAllChirps(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return chirps, nil
+}
+
+func getChirpByUserID(api *apiConfig, userID string) ([]database.Chirp, error) {
+	parsedID, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	chirps, err := api.db.GetChirpByUserID(context.Background(), parsedID)
+	if err != nil {
+		return nil, err
+	}
+	return chirps, nil
 }
 
 func (api *apiConfig) getChirpsByID(w http.ResponseWriter, r *http.Request) {

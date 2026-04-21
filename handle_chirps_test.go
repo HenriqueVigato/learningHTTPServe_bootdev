@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand/v2"
 	"net/http"
@@ -102,10 +103,46 @@ func TestGetAllChirps(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/chirps", nil)
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	api.getAllChirps(w, req)
+	api.getChirps(w, req)
 
 	if !strings.Contains(w.Body.String(), "testing the handler chirps") {
 		t.Errorf("Nao foi encontrado o chirp esperado %v", w.Body.String())
+	}
+}
+
+func TestGetChirpsByUserID(t *testing.T) {
+	api, err := getConnectionTestDB(t)
+	if err != nil {
+		t.Fatalf("erro ao preparar o banco de dados para os testes %v", err)
+	}
+
+	user, err := api.db.GetUserByEmail(context.Background(), "user@test.test")
+	if err != nil {
+		t.Fatalf("erro ao buscar o useario no banco de dados %v", err)
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/chirps", api.getChirps)
+
+	req := httptest.NewRequest("GET", fmt.Sprintf("/api/chirps?author_id=%s", user.ID), nil)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	mux.ServeHTTP(w, req)
+
+	var chirps []Chirp
+	if err := json.NewDecoder(w.Body).Decode(&chirps); err != nil {
+		t.Fatalf("erro ao converter o body para um array de struct %v", err)
+	}
+
+	if len(chirps) == 0 {
+		t.Errorf("a resposta nao deveria estar vazia %v", chirps)
+	}
+
+	for _, chirp := range chirps {
+		if chirp.UserID != user.ID {
+			t.Errorf("deveria apenas retornar os chips do usuario informada (%v) e foi retornado chirp do usuario %v", user.ID, chirp.UserID)
+		}
 	}
 }
 
